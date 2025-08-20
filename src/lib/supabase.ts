@@ -26,3 +26,4 @@ export const isAdmin = async () => {
   // For now, we'll assume any authenticated user is admin
   return true;
 };
+

@@ -9,9 +9,11 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface AdminLayoutProps {
   children?: ReactNode;
@@ -28,6 +30,7 @@ const navigation = [
 
 export function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { adminUser, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -84,7 +87,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             ))}
           </nav>
           <div className="border-t border-gray-200 p-4">
-            <button className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md">
+            <div className="flex items-center px-2 py-2 mb-2">
+              <User className="mr-3 h-5 w-5 text-gray-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {adminUser?.email}
+                </p>
+                <p className="text-xs text-gray-500 capitalize">
+                  {adminUser?.role}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => signOut()}
+              className="flex items-center w-full px-2 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-md"
+            >
               <LogOut className="mr-3 h-5 w-5" />
               Sign Out
             </button>
@@ -123,3 +140,4 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     </div>
   );
 }
+

@@ -15,6 +15,7 @@ export interface User {
   full_name: string;
   avatar_url?: string;
   phone?: string;
+  role?: 'admin' | 'super_admin' | 'customer';
   created_at: string;
   updated_at: string;
 }
@@ -82,3 +83,4 @@ export interface AdminUser {
   role: 'admin' | 'super_admin';
   created_at: string;
 }
+

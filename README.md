@@ -7,6 +7,7 @@ A starting point for the Chronos e-commerce admin dashboard, built with React, T
 This is a **basic foundation** for the admin dashboard with the following implemented:
 
 ### ✅ Completed Features
+- **Authentication System** - Login/logout, route protection, admin user management
 - **Basic Layout** - Responsive sidebar navigation with mobile support
 - **Dashboard Overview** - Placeholder stats and charts structure
 - **Products Page** - Basic product listing with search and filtering
@@ -19,7 +20,6 @@ This is a **basic foundation** for the admin dashboard with the following implem
 ### 🚧 What's Left to Implement
 
 #### High Priority
-- **Authentication System** - Login/logout, route protection, admin user management
 - **Product CRUD** - Add, edit, delete products with forms
 - **Order Management** - Order details view, invoice generation
 - **Real Data Integration** - Connect all pages to actual database data
@@ -72,8 +72,26 @@ This dashboard connects to the same Supabase database as the main e-commerce app
 - `products` - Product catalog
 - `orders` - Customer orders
 - `order_items` - Order line items
-- `user_profiles` - Customer profiles
+- `user_profiles` - Customer profiles (with `role` field for admin access)
 - `addresses` - Customer addresses
+
+## Authentication Setup
+
+1. **Create Admin User**: 
+   - Go to your Supabase dashboard → Authentication → Users
+   - Create a new user or use an existing one
+   - Note the user's UUID
+
+2. **Grant Admin Role**:
+   - Run the SQL commands in `admin-setup.sql` in your Supabase SQL editor
+   - Replace `'user-uuid-here'` with the actual user UUID
+   - Set the role to `'admin'` or `'super_admin'`
+
+3. **Test Login**:
+   - Start the development server: `npm run dev`
+   - Navigate to the dashboard
+   - You should be redirected to the login page
+   - Use the admin user's email and password to sign in
 
 ## Project Structure
 
@@ -96,11 +114,11 @@ src/
 
 ## Next Steps
 
-1. **Implement Authentication** - Add login system and protect routes
-2. **Build Product Forms** - Create add/edit product functionality
-3. **Enhance Order Management** - Add order details and status updates
-4. **Connect Real Data** - Replace placeholder data with actual database queries
-5. **Add Error Handling** - Implement proper loading and error states
+1. **Build Product Forms** - Create add/edit product functionality
+2. **Enhance Order Management** - Add order details and status updates
+3. **Connect Real Data** - Replace placeholder data with actual database queries
+4. **Add Error Handling** - Implement proper loading and error states
+5. **Add Image Upload** - Product image management
 
 ## Available Scripts
 

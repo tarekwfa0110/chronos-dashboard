@@ -7,6 +7,8 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanstackDevtools } from '@tanstack/react-devtools'
 
 import { AdminLayout } from '../components/layout/AdminLayout'
+import { AuthProvider } from '../contexts/AuthContext'
+import { ProtectedRoute } from '../components/auth/ProtectedRoute'
 
 import StoreDevtools from '../lib/demo-store-devtools'
 
@@ -52,9 +54,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <AdminLayout>
-          {children}
-        </AdminLayout>
+        <AuthProvider>
+          <ProtectedRoute>
+            <AdminLayout>
+              {children}
+            </AdminLayout>
+          </ProtectedRoute>
+        </AuthProvider>
         <TanstackDevtools
           config={{
             position: 'bottom-left',
