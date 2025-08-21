@@ -31,10 +31,10 @@ function DashboardPage() {
       ] = await Promise.all([
         supabase.from('orders').select('*', { count: 'exact', head: true }),
         supabase.from('products').select('*', { count: 'exact', head: true }),
-        supabase.from('user_profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('orders').select(`
           *,
-          user:user_profiles(full_name),
+          user:profiles(full_name),
           items:order_items(*)
         `).order('created_at', { ascending: false }).limit(5),
         supabase.from('products').select('*').order('created_at', { ascending: false }).limit(5)

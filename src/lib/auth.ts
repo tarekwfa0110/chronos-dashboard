@@ -19,9 +19,9 @@ export const isAdmin = async (): Promise<boolean> => {
   const user = await getCurrentUser();
   if (!user) return false;
   
-  // Check if user has admin role in user_profiles table
+  // Check if user has admin role in profiles table
   const { data: profile } = await supabase
-    .from('user_profiles')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
@@ -60,7 +60,7 @@ export const getAdminProfile = async (): Promise<AdminUser | null> => {
   if (!user) return null;
   
   const { data: profile } = await supabase
-    .from('user_profiles')
+    .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
@@ -72,6 +72,7 @@ export const getAdminProfile = async (): Promise<AdminUser | null> => {
   return {
     id: profile.id,
     email: user.email || '',
+    full_name: profile.full_name,
     role: profile.role,
     created_at: profile.created_at,
   };

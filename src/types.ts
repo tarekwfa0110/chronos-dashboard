@@ -12,10 +12,11 @@ export interface Product {
 
 export interface User {
   id: string;
-  full_name: string;
+  email?: string;
+  full_name?: string;
   avatar_url?: string;
   phone?: string;
-  role?: 'admin' | 'super_admin' | 'customer';
+  role?: 'user' | 'admin' | 'super_admin';
   created_at: string;
   updated_at: string;
 }
@@ -80,6 +81,7 @@ export interface DashboardStats {
 export interface AdminUser {
   id: string;
   email: string;
+  full_name?: string;
   role: 'admin' | 'super_admin';
   created_at: string;
 }

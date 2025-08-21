@@ -31,7 +31,7 @@ function OrdersPage() {
         .from('orders')
         .select(`
           *,
-          user:user_profiles(full_name),
+          user:profiles(full_name),
           items:order_items(*)
         `)
         .order('created_at', { ascending: false });

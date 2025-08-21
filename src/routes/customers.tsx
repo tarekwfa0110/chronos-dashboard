@@ -24,7 +24,7 @@ function CustomersPage() {
     queryKey: ['customers'],
     queryFn: async (): Promise<Customer[]> => {
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
