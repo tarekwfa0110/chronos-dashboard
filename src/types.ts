@@ -2,10 +2,12 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  image_url?: string;
-  category?: string;
   description?: string;
-  details?: string;
+  stock_quantity: number;
+  category?: string;
+  brand?: string;
+  image_url?: string;
+  is_active: boolean;
   created_at?: string;
   updated_at?: string;
 }

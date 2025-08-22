@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 export interface AdminUser {
   id: string;
   email: string;
+  full_name?: string;
   role: 'admin' | 'super_admin';
   created_at: string;
 }

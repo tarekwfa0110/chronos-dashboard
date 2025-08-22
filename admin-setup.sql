@@ -1,41 +1,55 @@
--- Admin Dashboard Setup Script
--- Run this in your Supabase SQL editor to set up admin users
+-- Admin Setup for Chronos Dashboard
+-- Run this in your Supabase SQL Editor to set up admin access
 
--- First, create a user through Supabase Auth (you'll need to do this manually in the Supabase dashboard)
--- Then, update their profile to have admin role
+-- ========================================
+-- 1. Ensure profiles table has role column
+-- ========================================
 
--- Example: Update a user to have admin role
--- Replace 'user-uuid-here' with the actual user ID from Supabase Auth
-UPDATE user_profiles 
+-- Add role column to profiles table if it doesn't exist
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'user';
+
+-- Add check constraint for role values
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE profiles ADD CONSTRAINT profiles_role_check 
+  CHECK (role IN ('user', 'admin', 'super_admin'));
+
+-- ========================================
+-- 2. Promote a user to admin by email
+-- ========================================
+
+-- Replace 'your-email@example.com' with the actual email of the user you want to make admin
+UPDATE profiles 
 SET role = 'admin' 
-WHERE id = 'user-uuid-here';
+WHERE id IN (
+  SELECT id FROM auth.users 
+  WHERE email = 'your-email@example.com'
+);
 
--- Or create a new admin user profile (after creating the auth user)
--- INSERT INTO user_profiles (id, full_name, email, role, created_at, updated_at)
--- VALUES (
---   'user-uuid-here',
---   'Admin User',
---   'admin@example.com',
---   'admin',
---   NOW(),
---   NOW()
--- );
+-- ========================================
+-- 3. Verify the admin user was created
+-- ========================================
 
--- Check existing users and their roles
+-- Check if the user was successfully promoted
 SELECT 
-  u.id,
   u.email,
-  up.full_name,
-  up.role,
-  u.created_at
+  p.full_name,
+  p.role,
+  p.created_at
 FROM auth.users u
-LEFT JOIN user_profiles up ON u.id = up.id
-ORDER BY u.created_at DESC;
+LEFT JOIN profiles p ON u.id = p.id
+WHERE u.email = 'your-email@example.com';
 
--- Grant admin role to existing user (replace with actual email)
--- UPDATE user_profiles 
--- SET role = 'admin' 
--- WHERE id = (
---   SELECT id FROM auth.users 
---   WHERE email = 'admin@yourdomain.com'
--- );
+-- ========================================
+-- 4. List all admin users
+-- ========================================
+
+-- Show all users with admin or super_admin roles
+SELECT 
+  u.email,
+  p.full_name,
+  p.role,
+  p.created_at
+FROM auth.users u
+LEFT JOIN profiles p ON u.id = p.id
+WHERE p.role IN ('admin', 'super_admin')
+ORDER BY p.created_at DESC;

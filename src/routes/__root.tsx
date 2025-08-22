@@ -9,6 +9,7 @@ import { TanstackDevtools } from '@tanstack/react-devtools'
 import { AdminLayout } from '../components/layout/AdminLayout'
 import { AuthProvider } from '../contexts/AuthContext'
 import { ProtectedRoute } from '../components/auth/ProtectedRoute'
+import { ErrorBoundary } from '../components/ErrorBoundary'
 
 import StoreDevtools from '../lib/demo-store-devtools'
 
@@ -33,7 +34,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Chronos Admin Dashboard',
       },
     ],
     links: [
@@ -54,13 +55,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <AuthProvider>
-          <ProtectedRoute>
-            <AdminLayout>
-              {children}
-            </AdminLayout>
-          </ProtectedRoute>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <ProtectedRoute>
+              <AdminLayout>
+                {children}
+              </AdminLayout>
+            </ProtectedRoute>
+          </AuthProvider>
+        </ErrorBoundary>
         <TanstackDevtools
           config={{
             position: 'bottom-left',
