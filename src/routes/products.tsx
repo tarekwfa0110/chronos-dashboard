@@ -21,6 +21,7 @@ function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch products
@@ -97,6 +98,7 @@ function ProductsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       console.log('Deleting product:', id);
+      setDeletingProductId(id);
       const { error } = await supabase
         .from('products')
         .delete()
@@ -109,10 +111,14 @@ function ProductsPage() {
       console.log('Product deleted successfully');
     },
     onSuccess: () => {
+      console.log('Delete mutation succeeded, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      setDeletingProductId(null);
+      alert('Product deleted successfully!');
     },
     onError: (error) => {
       console.error('Delete mutation error:', error);
+      setDeletingProductId(null);
       alert(`Failed to delete product: ${error.message}`);
     },
   });
@@ -134,8 +140,12 @@ function ProductsPage() {
 
   // Handle delete
   const handleDelete = (id: string) => {
+    console.log('Attempting to delete product with ID:', id);
     if (confirm('Are you sure you want to delete this product?')) {
+      console.log('User confirmed deletion, calling deleteMutation');
       deleteMutation.mutate(id);
+    } else {
+      console.log('User cancelled deletion');
     }
   };
 
@@ -298,8 +308,13 @@ function ProductsPage() {
                             size="sm"
                             onClick={() => handleDelete(product.id)}
                             className="text-red-600 hover:text-red-700"
+                            disabled={deletingProductId === product.id}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {deletingProductId === product.id ? (
+                              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       </TableCell>
