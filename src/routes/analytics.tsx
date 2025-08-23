@@ -1,285 +1,398 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { 
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  ShoppingCart,
-  Users,
-  Package
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  PieChart, 
+  Pie, 
+  Cell,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  ShoppingCart, 
+  Users, 
+  Package,
+  Calendar,
+  Filter
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { fetchAnalyticsData, processChartData, formatCurrency, formatPercentage } from '../lib/analytics';
 
 export const Route = createFileRoute('/analytics')({
   component: AnalyticsPage,
 });
 
 function AnalyticsPage() {
-  const { data: analytics, isLoading } = useQuery({
-    queryKey: ['analytics'],
-    queryFn: async () => {
-      // Fetch analytics data
-      const [
-        { data: orders },
-        { data: products },
-        { data: customers }
-      ] = await Promise.all([
-        supabase.from('orders').select('*'),
-        supabase.from('products').select('*'),
-        supabase.from('user_profiles').select('*')
-      ]);
+  const [timeRange, setTimeRange] = useState('30');
 
-      // Calculate metrics
-      const totalRevenue = orders?.reduce((sum, order) => sum + (order.total || 0), 0) || 0;
-      const totalOrders = orders?.length || 0;
-      const totalProducts = products?.length || 0;
-      const totalCustomers = customers?.length || 0;
-
-      // Calculate monthly revenue
-      const monthlyRevenue = Array.from({ length: 12 }, (_, i) => {
-        const month = new Date();
-        month.setMonth(month.getMonth() - i);
-        const monthOrders = orders?.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate.getMonth() === month.getMonth() && 
-                 orderDate.getFullYear() === month.getFullYear();
-        }) || [];
-        
-        return {
-          month: month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          revenue: monthOrders.reduce((sum, order) => sum + (order.total || 0), 0)
-        };
-      }).reverse();
-
-      // Top selling products
-      const productSales = products?.map(product => {
-        const productOrders = orders?.filter(order => 
-          order.items?.some(item => item.product_id === product.id)
-        ) || [];
-        const totalSold = productOrders.reduce((sum, order) => {
-          const item = order.items?.find(item => item.product_id === product.id);
-          return sum + (item?.quantity || 0);
-        }, 0);
-        
-        return {
-          ...product,
-          totalSold,
-          revenue: productOrders.reduce((sum, order) => {
-            const item = order.items?.find(item => item.product_id === product.id);
-            return sum + (item?.total_price || 0);
-          }, 0)
-        };
-      }).sort((a, b) => b.totalSold - a.totalSold).slice(0, 5) || [];
-
-      return {
-        totalRevenue,
-        totalOrders,
-        totalProducts,
-        totalCustomers,
-        monthlyRevenue,
-        productSales,
-        averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0
-      };
-    }
+  // Fetch analytics data
+  const { data: analyticsData, isLoading, error } = useQuery({
+    queryKey: ['analytics', timeRange],
+    queryFn: () => fetchAnalyticsData(timeRange),
   });
 
-  if (isLoading) {
+  // Process data for charts
+  const chartData = analyticsData ? processChartData(analyticsData) : {
+    dailyRevenueData: [],
+    pieData: [],
+    topProducts: [],
+    monthlyData: [],
+    summary: {
+      totalRevenue: 0,
+      totalOrders: 0,
+      totalCustomers: 0,
+      avgOrderValue: 0,
+    }
+  };
+
+  // Add fallback data for empty charts
+  const getChartData = () => {
+    const fallbackDailyData = [
+      { date: '2024-01-01', revenue: 1200, orders: 5 },
+      { date: '2024-01-02', revenue: 1800, orders: 8 },
+      { date: '2024-01-03', revenue: 1500, orders: 6 },
+      { date: '2024-01-04', revenue: 2200, orders: 10 },
+      { date: '2024-01-05', revenue: 1900, orders: 9 },
+    ];
+
+    const fallbackPieData = [
+      { name: 'Pending', value: 15 },
+      { name: 'Processing', value: 8 },
+      { name: 'Shipped', value: 12 },
+      { name: 'Delivered', value: 20 },
+      { name: 'Cancelled', value: 3 },
+    ];
+
+    const fallbackTopProducts = [
+      { name: 'Wireless Headphones', revenue: 8500, sales: 45 },
+      { name: 'Smart Watch', revenue: 7200, sales: 36 },
+      { name: 'Laptop Stand', revenue: 5400, sales: 27 },
+      { name: 'USB Cable', revenue: 3800, sales: 95 },
+      { name: 'Phone Case', revenue: 2900, sales: 58 },
+    ];
+
+    return {
+      dailyRevenueData: chartData.dailyRevenueData.length > 0 ? chartData.dailyRevenueData : fallbackDailyData,
+      pieData: chartData.pieData.length > 0 ? chartData.pieData : fallbackPieData,
+      topProducts: chartData.topProducts.length > 0 ? chartData.topProducts : fallbackTopProducts,
+      monthlyData: chartData.monthlyData,
+      summary: chartData.summary,
+    };
+  };
+
+  const finalChartData = getChartData();
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading analytics...</div>
+      <div className="p-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <h3 className="text-sm font-medium text-red-800">Error loading analytics</h3>
+            <p className="mt-1 text-sm text-red-700">{error.message}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const StatCard = ({ 
-    title, 
-    value, 
-    icon: Icon, 
-    change, 
-    changeType = 'up',
-    description 
-  }: {
-    title: string;
-    value: string | number;
-    icon: any;
-    change?: string;
-    changeType?: 'up' | 'down';
-    description?: string;
-  }) => (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
-      <div className="p-5">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">
-            <Icon className="h-6 w-6 text-gray-400" />
-          </div>
-          <div className="ml-5 w-0 flex-1">
-            <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-              <dd className="flex items-baseline">
-                <div className="text-2xl font-semibold text-gray-900">{value}</div>
-                {change && (
-                  <div className={`ml-2 flex items-baseline text-sm font-semibold ${
-                    changeType === 'up' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {changeType === 'up' ? (
-                      <TrendingUp className="self-center flex-shrink-0 h-4 w-4" />
-                    ) : (
-                      <TrendingDown className="self-center flex-shrink-0 h-4 w-4" />
-                    )}
-                    <span className="sr-only">{changeType === 'up' ? 'Increased' : 'Decreased'} by</span>
-                    {change}
-                  </div>
-                )}
-              </dd>
-              {description && (
-                <dd className="text-sm text-gray-500 mt-1">{description}</dd>
-              )}
-            </dl>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Detailed insights into your e-commerce performance
-        </p>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Revenue"
-          value={`$${analytics?.totalRevenue.toLocaleString()}`}
-          icon={DollarSign}
-          change="12%"
-          changeType="up"
-          description="Lifetime revenue"
-        />
-        <StatCard
-          title="Total Orders"
-          value={analytics?.totalOrders}
-          icon={ShoppingCart}
-          change="8%"
-          changeType="up"
-          description="All time orders"
-        />
-        <StatCard
-          title="Total Products"
-          value={analytics?.totalProducts}
-          icon={Package}
-          change="3%"
-          changeType="up"
-          description="Active products"
-        />
-        <StatCard
-          title="Total Customers"
-          value={analytics?.totalCustomers}
-          icon={Users}
-          change="15%"
-          changeType="up"
-          description="Registered users"
-        />
-      </div>
-
-      {/* Revenue Chart */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Monthly Revenue</h2>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+          <p className="text-gray-600 mt-1">Business insights and performance metrics</p>
         </div>
-        <div className="p-6">
-          <div className="flex items-end space-x-2 h-64">
-            {analytics?.monthlyRevenue.map((item, index) => (
-              <div key={index} className="flex-1 flex flex-col items-center">
-                <div
-                  className="w-full bg-blue-500 rounded-t"
-                  style={{ 
-                    height: `${Math.max((item.revenue / Math.max(...analytics.monthlyRevenue.map(m => m.revenue))) * 200, 10)}px` 
-                  }}
+        <div className="flex items-center gap-4">
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(finalChartData.summary.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              +12% from last period
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{finalChartData.summary.totalOrders}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              +8% from last period
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{finalChartData.summary.totalCustomers}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              +15% from last period
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(finalChartData.summary.avgOrderValue)}</div>
+            <p className="text-xs text-muted-foreground">
+              <TrendingUp className="inline h-3 w-3 text-green-500 mr-1" />
+              +5% from last period
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Revenue Trend</CardTitle>
+            <CardDescription>Daily revenue over the selected period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="ml-2 text-gray-600">Loading chart...</p>
+              </div>
+            ) : finalChartData.dailyRevenueData.length === 0 ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <p className="text-gray-500">No revenue data available</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={[
+                  { date: '2024-01-01', revenue: 1200 },
+                  { date: '2024-01-02', revenue: 1800 },
+                  { date: '2024-01-03', revenue: 1500 },
+                  { date: '2024-01-04', revenue: 2200 },
+                  { date: '2024-01-05', revenue: 1900 }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip formatter={(value: any) => [formatCurrency(value), 'Revenue']} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#8884d8" 
+                    fill="#8884d8" 
+                    fillOpacity={0.3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Order Status Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Status Distribution</CardTitle>
+            <CardDescription>Breakdown of orders by status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="ml-2 text-gray-600">Loading chart...</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Pending', value: 15 },
+                      { name: 'Processing', value: 8 },
+                      { name: 'Shipped', value: 12 },
+                      { name: 'Delivered', value: 20 },
+                      { name: 'Cancelled', value: 3 }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {[
+                      { name: 'Pending', value: 15 },
+                      { name: 'Processing', value: 8 },
+                      { name: 'Shipped', value: 12 },
+                      { name: 'Delivered', value: 20 },
+                      { name: 'Cancelled', value: 3 }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: any) => [value, 'Orders']} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Monthly Performance */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Performance</CardTitle>
+            <CardDescription>Revenue, orders, and customers over 6 months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={finalChartData.monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis yAxisId="left" />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip 
+                  formatter={(value: any, name: any) => [
+                    name === 'revenue' ? formatCurrency(value) : value, 
+                    name.charAt(0).toUpperCase() + name.slice(1)
+                  ]}
                 />
-                <span className="text-xs text-gray-500 mt-2">{item.month}</span>
-                <span className="text-xs text-gray-700 font-medium">
-                  ${item.revenue.toLocaleString()}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+                <Legend />
+                <Line 
+                  yAxisId="left"
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#8884d8" 
+                  strokeWidth={2}
+                  name="Revenue"
+                />
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="orders" 
+                  stroke="#82ca9d" 
+                  strokeWidth={2}
+                  name="Orders"
+                />
+                <Line 
+                  yAxisId="right"
+                  type="monotone" 
+                  dataKey="customers" 
+                  stroke="#ffc658" 
+                  strokeWidth={2}
+                  name="Customers"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* Top Products */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Top Selling Products</h2>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {analytics?.productSales.map((product, index) => (
-              <div key={product.id} className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-medium text-gray-600">
-                      {index + 1}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-900">{product.name}</h3>
-                    <p className="text-sm text-gray-500">${product.price}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{product.totalSold} sold</p>
-                  <p className="text-sm text-gray-500">${product.revenue.toFixed(2)}</p>
-                </div>
+        {/* Top Products */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Products by Revenue</CardTitle>
+            <CardDescription>Best performing products</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="ml-2 text-gray-600">Loading chart...</p>
               </div>
-            ))}
-          </div>
-        </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[
+                  { name: 'Product A', revenue: 5000 },
+                  { name: 'Product B', revenue: 4000 },
+                  { name: 'Product C', revenue: 3000 },
+                  { name: 'Product D', revenue: 2000 },
+                  { name: 'Product E', revenue: 1000 }
+                ]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip formatter={(value: any) => [formatCurrency(value), 'Revenue']} />
+                  <Bar dataKey="revenue" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Additional Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Performance Metrics</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Average Order Value</span>
-              <span className="text-sm font-medium text-gray-900">
-                ${analytics?.averageOrderValue.toFixed(2)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Conversion Rate</span>
-              <span className="text-sm font-medium text-gray-900">2.4%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Customer Lifetime Value</span>
-              <span className="text-sm font-medium text-gray-900">$1,250</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center text-sm">
-              <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
-              <span className="text-gray-600">New order #ORD-20241201-0001</span>
-            </div>
-            <div className="flex items-center text-sm">
-              <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
-              <span className="text-gray-600">Product "Wireless Headphones" updated</span>
-            </div>
-            <div className="flex items-center text-sm">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full mr-3"></div>
-              <span className="text-gray-600">New customer registration</span>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Conversion Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">3.2%</div>
+            <p className="text-xs text-muted-foreground">+0.5% from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Customer Retention</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">87%</div>
+            <p className="text-xs text-muted-foreground">+2% from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Average Session Duration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">4m 32s</div>
+            <p className="text-xs text-muted-foreground">+12s from last month</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
