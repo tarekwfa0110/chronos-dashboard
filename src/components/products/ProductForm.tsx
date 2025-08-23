@@ -1,5 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Package, 
+  DollarSign, 
+  Hash, 
+  Tag, 
+  Building, 
+  ImageIcon, 
+  FileText, 
+  Eye, 
+  EyeOff 
+} from 'lucide-react';
+
+// Form validation schema
+const productSchema = z.object({
+  name: z.string().min(1, 'Product name is required'),
+  price: z.string().min(1, 'Price is required'),
+  stock_quantity: z.string().min(1, 'Stock quantity is required'),
+  category: z.string().optional(),
+  brand: z.string().optional(),
+  image_url: z.string().url().optional().or(z.literal('')),
+  description: z.string().optional(),
+  is_active: z.boolean(),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
   isOpen: boolean;
@@ -42,208 +85,287 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   product,
   isLoading = false
 }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    description: '',
-    stock_quantity: '',
-    category: '',
-    brand: '',
-    image_url: '',
-    is_active: true
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: '',
+      price: '',
+      stock_quantity: '',
+      category: undefined,
+      brand: undefined,
+      image_url: '',
+      description: '',
+      is_active: true,
+    },
   });
 
+  // Update form when product changes
   useEffect(() => {
     if (product) {
-      setFormData({
+      form.reset({
         name: product.name || '',
         price: product.price?.toString() || '',
-        description: product.description || '',
         stock_quantity: product.stock_quantity?.toString() || '',
-        category: product.category || '',
-        brand: product.brand || '',
+        category: product.category || undefined,
+        brand: product.brand || undefined,
         image_url: product.image_url || '',
-        is_active: product.is_active ?? true
+        description: product.description || '',
+        is_active: product.is_active ?? true,
       });
+      setImagePreview(product.image_url || null);
     } else {
-      setFormData({
+      form.reset({
         name: '',
         price: '',
-        description: '',
         stock_quantity: '',
-        category: '',
-        brand: '',
+        category: undefined,
+        brand: undefined,
         image_url: '',
-        is_active: true
+        description: '',
+        is_active: true,
       });
+      setImagePreview(null);
     }
-  }, [product]);
+  }, [product, form]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const productData = {
-      ...formData,
-      price: parseFloat(formData.price),
-      stock_quantity: parseInt(formData.stock_quantity),
-      is_active: formData.is_active
+  // Update image preview when image URL changes
+  useEffect(() => {
+    const imageUrl = form.watch('image_url');
+    if (imageUrl) {
+      setImagePreview(imageUrl);
+    }
+  }, [form.watch('image_url')]);
+
+  const handleSubmit = (data: ProductFormData) => {
+    // Transform string values to numbers for the API
+    const transformedData = {
+      ...data,
+      price: parseFloat(data.price),
+      stock_quantity: parseInt(data.stock_quantity),
+      category: data.category || null,
+      brand: data.brand || null,
     };
-    
-    onSubmit(productData);
+    onSubmit(transformedData);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
             {product ? 'Edit Product' : 'Add New Product'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <X size={24} />
-          </button>
-        </div>
+          </DialogTitle>
+          <DialogDescription>
+            {product ? 'Update your product information' : 'Fill in the details to create a new product'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Basic Information
+              </CardTitle>
+              <CardDescription>Product details and pricing</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Product Name *</Label>
+                  <Input
+                    id="name"
+                    {...form.register('name')}
+                    placeholder="Enter product name"
+                  />
+                  {form.formState.errors.name && (
+                    <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Price *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    {...form.register('price')}
+                    placeholder="0.00"
+                  />
+                  {form.formState.errors.price && (
+                    <p className="text-sm text-red-500">{form.formState.errors.price.message}</p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Stock Quantity *
-              </label>
-              <input
-                type="number"
-                required
-                min="0"
-                value={formData.stock_quantity}
-                onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stock_quantity">Stock Quantity *</Label>
+                  <Input
+                    id="stock_quantity"
+                    type="number"
+                    min="0"
+                    {...form.register('stock_quantity')}
+                    placeholder="0"
+                  />
+                  {form.formState.errors.stock_quantity && (
+                    <p className="text-sm text-red-500">{form.formState.errors.stock_quantity.message}</p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Category</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brand">Brand</Label>
+                  <Select onValueChange={(value) => form.setValue('brand', value)} value={form.watch('brand') || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand} value={brand}>
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Brand
-              </label>
-              <select
-                value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Brand</option>
-                {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select onValueChange={(value) => form.setValue('category', value)} value={form.watch('category') || ''}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Image URL
-              </label>
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
+          {/* Image Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                Product Image
+              </CardTitle>
+              <CardDescription>Add a product image URL</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="image_url">Image URL</Label>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input
+                      id="image_url"
+                      type="url"
+                      {...form.register('image_url')}
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    {imagePreview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowImagePreview(!showImagePreview)}
+                        className="mt-2"
+                      >
+                        {showImagePreview ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                        {showImagePreview ? 'Hide Preview' : 'Show Preview'}
+                      </Button>
+                    )}
+                  </div>
+                  {imagePreview && showImagePreview && (
+                    <div className="w-32 h-32 rounded-lg border-2 border-gray-300 overflow-hidden flex-shrink-0">
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                        className="w-full h-full object-cover"
+                        onError={() => setImagePreview(null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {/* Description Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Product Description
+              </CardTitle>
+              <CardDescription>Describe your product</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  {...form.register('description')}
+                  placeholder="Enter product description..."
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="is_active"
-              checked={formData.is_active}
-              onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-              Active Product
-            </label>
-          </div>
+          {/* Status Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                Product Status
+              </CardTitle>
+              <CardDescription>Control product visibility</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is_active">Active Product</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {form.watch('is_active') 
+                      ? 'This product will be visible to customers' 
+                      : 'This product will be hidden from customers'
+                    }
+                  </p>
+                </div>
+                <Switch
+                  id="is_active"
+                  checked={form.watch('is_active')}
+                  onCheckedChange={(checked) => form.setValue('is_active', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {isLoading ? 'Saving...' : (product ? 'Update Product' : 'Add Product')}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                product ? 'Update Product' : 'Add Product'
+              )}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
