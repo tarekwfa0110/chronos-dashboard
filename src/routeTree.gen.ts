@@ -16,11 +16,12 @@ import { Route as ProductsRouteImport } from './routes/products'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 import { Route as DemoTanstackQueryRouteImport } from './routes/demo.tanstack-query'
 import { Route as DemoTableRouteImport } from './routes/demo.table'
 import { Route as DemoStoreRouteImport } from './routes/demo.store'
+import { Route as CustomersIdRouteImport } from './routes/customers.$id'
 import { Route as DemoStartServerFuncsRouteImport } from './routes/demo.start.server-funcs'
 import { Route as DemoStartApiRequestRouteImport } from './routes/demo.start.api-request'
 import { ServerRoute as ApiDemoTqTodosServerRouteImport } from './routes/api.demo-tq-todos'
@@ -53,14 +54,15 @@ const AnalyticsRoute = AnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutRoute = LayoutRouteImport.update({
-  id: '/_layout',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/$orderId',
+  path: '/$orderId',
+  getParentRoute: () => OrdersRoute,
 } as any)
 const DemoTanstackQueryRoute = DemoTanstackQueryRouteImport.update({
   id: '/demo/tanstack-query',
@@ -76,6 +78,11 @@ const DemoStoreRoute = DemoStoreRouteImport.update({
   id: '/demo/store',
   path: '/demo/store',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CustomersIdRoute = CustomersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CustomersRoute,
 } as any)
 const DemoStartServerFuncsRoute = DemoStartServerFuncsRouteImport.update({
   id: '/demo/start/server-funcs',
@@ -101,41 +108,46 @@ const ApiDemoNamesServerRoute = ApiDemoNamesServerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
-  '/customers': typeof CustomersRoute
-  '/orders': typeof OrdersRoute
+  '/customers': typeof CustomersRouteWithChildren
+  '/orders': typeof OrdersRouteWithChildren
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
+  '/customers/$id': typeof CustomersIdRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/analytics': typeof AnalyticsRoute
-  '/customers': typeof CustomersRoute
-  '/orders': typeof OrdersRoute
+  '/customers': typeof CustomersRouteWithChildren
+  '/orders': typeof OrdersRouteWithChildren
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
+  '/customers/$id': typeof CustomersIdRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_layout': typeof LayoutRoute
   '/analytics': typeof AnalyticsRoute
-  '/customers': typeof CustomersRoute
-  '/orders': typeof OrdersRoute
+  '/customers': typeof CustomersRouteWithChildren
+  '/orders': typeof OrdersRouteWithChildren
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
+  '/customers/$id': typeof CustomersIdRoute
   '/demo/store': typeof DemoStoreRoute
   '/demo/table': typeof DemoTableRoute
   '/demo/tanstack-query': typeof DemoTanstackQueryRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/demo/start/api-request': typeof DemoStartApiRequestRoute
   '/demo/start/server-funcs': typeof DemoStartServerFuncsRoute
 }
@@ -148,9 +160,11 @@ export interface FileRouteTypes {
     | '/orders'
     | '/products'
     | '/settings'
+    | '/customers/$id'
     | '/demo/store'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/orders/$orderId'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
   fileRoutesByTo: FileRoutesByTo
@@ -161,33 +175,35 @@ export interface FileRouteTypes {
     | '/orders'
     | '/products'
     | '/settings'
+    | '/customers/$id'
     | '/demo/store'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/orders/$orderId'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
   id:
     | '__root__'
     | '/'
-    | '/_layout'
     | '/analytics'
     | '/customers'
     | '/orders'
     | '/products'
     | '/settings'
+    | '/customers/$id'
     | '/demo/store'
     | '/demo/table'
     | '/demo/tanstack-query'
+    | '/orders/$orderId'
     | '/demo/start/api-request'
     | '/demo/start/server-funcs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LayoutRoute: typeof LayoutRoute
   AnalyticsRoute: typeof AnalyticsRoute
-  CustomersRoute: typeof CustomersRoute
-  OrdersRoute: typeof OrdersRoute
+  CustomersRoute: typeof CustomersRouteWithChildren
+  OrdersRoute: typeof OrdersRouteWithChildren
   ProductsRoute: typeof ProductsRoute
   SettingsRoute: typeof SettingsRoute
   DemoStoreRoute: typeof DemoStoreRoute
@@ -259,19 +275,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout': {
-      id: '/_layout'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof LayoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof OrdersRoute
     }
     '/demo/tanstack-query': {
       id: '/demo/tanstack-query'
@@ -293,6 +309,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/demo/store'
       preLoaderRoute: typeof DemoStoreRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/customers/$id': {
+      id: '/customers/$id'
+      path: '/$id'
+      fullPath: '/customers/$id'
+      preLoaderRoute: typeof CustomersIdRouteImport
+      parentRoute: typeof CustomersRoute
     }
     '/demo/start/server-funcs': {
       id: '/demo/start/server-funcs'
@@ -329,12 +352,34 @@ declare module '@tanstack/react-start/server' {
   }
 }
 
+interface CustomersRouteChildren {
+  CustomersIdRoute: typeof CustomersIdRoute
+}
+
+const CustomersRouteChildren: CustomersRouteChildren = {
+  CustomersIdRoute: CustomersIdRoute,
+}
+
+const CustomersRouteWithChildren = CustomersRoute._addFileChildren(
+  CustomersRouteChildren,
+)
+
+interface OrdersRouteChildren {
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+}
+
+const OrdersRouteChildren: OrdersRouteChildren = {
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
+}
+
+const OrdersRouteWithChildren =
+  OrdersRoute._addFileChildren(OrdersRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LayoutRoute: LayoutRoute,
   AnalyticsRoute: AnalyticsRoute,
-  CustomersRoute: CustomersRoute,
-  OrdersRoute: OrdersRoute,
+  CustomersRoute: CustomersRouteWithChildren,
+  OrdersRoute: OrdersRouteWithChildren,
   ProductsRoute: ProductsRoute,
   SettingsRoute: SettingsRoute,
   DemoStoreRoute: DemoStoreRoute,

@@ -19,11 +19,11 @@ import {
   Area
 } from 'recharts';
 import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  ShoppingCart, 
-  Users, 
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  ShoppingCart,
+  Users,
   Package,
   Calendar,
   Filter
@@ -40,7 +40,7 @@ export const Route = createFileRoute('/analytics')({
 function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30');
 
-  // Fetch analytics data
+      // Fetch analytics data
   const { data: analyticsData, isLoading, error } = useQuery({
     queryKey: ['analytics', timeRange],
     queryFn: () => fetchAnalyticsData(timeRange),
@@ -85,8 +85,8 @@ function AnalyticsPage() {
       { name: 'USB Cable', revenue: 3800, sales: 95 },
       { name: 'Phone Case', revenue: 2900, sales: 58 },
     ];
-
-    return {
+        
+        return {
       dailyRevenueData: chartData.dailyRevenueData.length > 0 ? chartData.dailyRevenueData : fallbackDailyData,
       pieData: chartData.pieData.length > 0 ? chartData.pieData : fallbackPieData,
       topProducts: chartData.topProducts.length > 0 ? chartData.topProducts : fallbackTopProducts,
@@ -119,7 +119,7 @@ function AnalyticsPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
           <p className="text-gray-600 mt-1">Business insights and performance metrics</p>
-        </div>
+          </div>
         <div className="flex items-center gap-4">
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-32">
@@ -131,8 +131,8 @@ function AnalyticsPage() {
               <SelectItem value="90">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-        </div>
       </div>
+    </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -331,7 +331,7 @@ function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        {/* Top Products */}
+      {/* Top Products */}
         <Card>
           <CardHeader>
             <CardTitle>Top Products by Revenue</CardTitle>
@@ -342,7 +342,7 @@ function AnalyticsPage() {
               <div className="flex items-center justify-center h-[300px]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <p className="ml-2 text-gray-600">Loading chart...</p>
-              </div>
+        </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={[

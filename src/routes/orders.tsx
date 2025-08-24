@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Order } from '../types';
+import { testSupabaseConnection } from '../lib/supabase-test';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,26 +30,34 @@ export const Route = createFileRoute('/orders')({
 });
 
 function OrdersPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // Test Supabase connection on component mount
+  useEffect(() => {
+    testSupabaseConnection();
+  }, []);
 
   const { data: orders, isLoading, error } = useQuery({
     queryKey: ['orders'],
     queryFn: async (): Promise<Order[]> => {
       const { data, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          user:profiles(full_name, email),
-          items:order_items(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
       return data || [];
-    }
+    },
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const updateOrderStatusMutation = useMutation({
@@ -73,9 +82,8 @@ function OrdersPage() {
   });
 
   const filteredOrders = orders?.filter(order => {
-    const matchesSearch = order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.user_id?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -119,12 +127,14 @@ function OrdersPage() {
   };
 
   if (error) {
+    console.error('Orders error:', error);
     return (
       <div className="p-6">
         <Card className="border-red-200 bg-red-50">
           <CardContent className="pt-6">
             <h3 className="text-sm font-medium text-red-800">Error loading orders</h3>
             <p className="mt-1 text-sm text-red-700">{error.message}</p>
+            <p className="mt-2 text-xs text-red-600">Check console for more details</p>
           </CardContent>
         </Card>
       </div>
@@ -133,6 +143,8 @@ function OrdersPage() {
 
   return (
     <div className="p-6 space-y-6">
+
+
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
@@ -248,16 +260,15 @@ function OrdersPage() {
                       <TableCell>
                         <div>
                           <div className="font-medium">#{order.order_number}</div>
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
-                            <Package className="w-3 h-3" />
-                            {order.items?.length || 0} items
+                          <div className="text-sm text-gray-500">
+                            Order ID: {order.id}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{order.user?.full_name || 'Unknown Customer'}</div>
-                          <div className="text-sm text-gray-500">{order.user?.email}</div>
+                          <div className="font-medium">Customer ID: {order.user_id}</div>
+                          <div className="text-sm text-gray-500">Click View Details for more info</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -277,7 +288,11 @@ function OrdersPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate({ to: '/orders/$orderId', params: { orderId: order.id } })}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
                           <Select 

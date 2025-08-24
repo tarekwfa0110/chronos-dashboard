@@ -41,7 +41,7 @@ function ProductsPage() {
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (product: Partial<Product>) => {
-      console.log('Creating product:', product);
+
       const { data, error } = await supabase
         .from('products')
         .insert([product])
@@ -52,7 +52,7 @@ function ProductsPage() {
         console.error('Create product error:', error);
         throw error;
       }
-      console.log('Product created successfully:', data);
+      
       return data;
     },
     onSuccess: () => {
@@ -68,7 +68,7 @@ function ProductsPage() {
   // Update product mutation
   const updateMutation = useMutation({
     mutationFn: async (product: Partial<Product>) => {
-      console.log('Updating product:', product);
+
       const { data, error } = await supabase
         .from('products')
         .update(product)
@@ -80,7 +80,7 @@ function ProductsPage() {
         console.error('Update product error:', error);
         throw error;
       }
-      console.log('Product updated successfully:', data);
+      
       return data;
     },
     onSuccess: () => {
@@ -97,7 +97,7 @@ function ProductsPage() {
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      console.log('Deleting product:', id);
+
       setDeletingProductId(id);
       const { error } = await supabase
         .from('products')
@@ -108,10 +108,8 @@ function ProductsPage() {
         console.error('Delete product error:', error);
         throw error;
       }
-      console.log('Product deleted successfully');
     },
     onSuccess: () => {
-      console.log('Delete mutation succeeded, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['products'] });
       setDeletingProductId(null);
       alert('Product deleted successfully!');
@@ -140,12 +138,8 @@ function ProductsPage() {
 
   // Handle delete
   const handleDelete = (id: string) => {
-    console.log('Attempting to delete product with ID:', id);
     if (confirm('Are you sure you want to delete this product?')) {
-      console.log('User confirmed deletion, calling deleteMutation');
       deleteMutation.mutate(id);
-    } else {
-      console.log('User cancelled deletion');
     }
   };
 

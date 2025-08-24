@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { ImageUpload } from '@/components/ui/image-upload';
 import { 
   Package, 
   DollarSign, 
@@ -85,8 +86,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   product,
   isLoading = false
 }) => {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -115,7 +115,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         description: product.description || '',
         is_active: product.is_active ?? true,
       });
-      setImagePreview(product.image_url || null);
+      // Set images from product
+      if (product.image_url) {
+        setImages([product.image_url]);
+      } else {
+        setImages([]);
+      }
     } else {
       form.reset({
         name: '',
@@ -127,17 +132,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         description: '',
         is_active: true,
       });
-      setImagePreview(null);
+      setImages([]);
     }
   }, [product, form]);
 
-  // Update image preview when image URL changes
+  // Update form image_url when images change
   useEffect(() => {
-    const imageUrl = form.watch('image_url');
-    if (imageUrl) {
-      setImagePreview(imageUrl);
+    if (images.length > 0) {
+      form.setValue('image_url', images[0]);
+    } else {
+      form.setValue('image_url', '');
     }
-  }, [form.watch('image_url')]);
+  }, [images, form]);
 
   const handleSubmit = (data: ProductFormData) => {
     // Transform string values to numbers for the API
@@ -255,46 +261,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImageIcon className="w-5 h-5" />
-                Product Image
+                Product Images
               </CardTitle>
-              <CardDescription>Add a product image URL</CardDescription>
+              <CardDescription>Upload product images (drag & drop or click to select)</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="image_url">Image URL</Label>
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <Input
-                      id="image_url"
-                      type="url"
-                      {...form.register('image_url')}
-                      placeholder="https://example.com/image.jpg"
-                    />
-                    {imagePreview && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowImagePreview(!showImagePreview)}
-                        className="mt-2"
-                      >
-                        {showImagePreview ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                        {showImagePreview ? 'Hide Preview' : 'Show Preview'}
-                      </Button>
-                    )}
-                  </div>
-                  {imagePreview && showImagePreview && (
-                    <div className="w-32 h-32 rounded-lg border-2 border-gray-300 overflow-hidden flex-shrink-0">
-                      <img
-                        src={imagePreview}
-                        alt="Product preview"
-                        className="w-full h-full object-cover"
-                        onError={() => setImagePreview(null)}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+            <CardContent>
+              <ImageUpload
+                images={images}
+                onImagesChange={setImages}
+                maxImages={5}
+                maxSize={5}
+                disabled={isLoading}
+              />
             </CardContent>
           </Card>
 

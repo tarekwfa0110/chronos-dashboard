@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { 
@@ -25,6 +25,7 @@ export const Route = createFileRoute('/customers')({
 });
 
 function CustomersPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: customers, isLoading, error } = useQuery({
@@ -34,10 +35,16 @@ function CustomersPage() {
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
       return data || [];
-    }
+    },
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: customerStats } = useQuery({
@@ -53,8 +60,10 @@ function CustomersPage() {
         if (!stats[order.user_id]) {
           stats[order.user_id] = { orderCount: 0, totalSpent: 0 };
         }
-        stats[order.user_id].orderCount += 1;
-        stats[order.user_id].totalSpent += order.total || 0;
+        if (stats[order.user_id]) {
+          stats[order.user_id].orderCount += 1;
+          stats[order.user_id].totalSpent += order.total || 0;
+        }
       });
 
       return stats;
@@ -70,10 +79,10 @@ function CustomersPage() {
   // Calculate customer statistics
   const customerStatsData = {
     total: customers?.length || 0,
-    active: customers?.filter(c => customerStats?.[c.id]?.orderCount > 0).length || 0,
-    totalRevenue: Object.values(customerStats || {}).reduce((sum, stat) => sum + stat.totalSpent, 0),
+    active: customers?.filter(c => (customerStats?.[c.id]?.orderCount || 0) > 0)?.length || 0,
+    totalRevenue: Object.values(customerStats || {}).reduce((sum, stat) => sum + (stat?.totalSpent || 0), 0),
     avgOrderValue: Object.values(customerStats || {}).length > 0 
-      ? Object.values(customerStats || {}).reduce((sum, stat) => sum + stat.totalSpent, 0) / Object.values(customerStats || {}).length
+      ? Object.values(customerStats || {}).reduce((sum, stat) => sum + (stat?.totalSpent || 0), 0) / Object.values(customerStats || {}).length
       : 0,
   };
 
@@ -93,9 +102,14 @@ function CustomersPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-        <p className="text-gray-600 mt-1">View and manage customer profiles</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
+          <p className="text-gray-600 mt-1">View and manage customer profiles</p>
+        </div>
+        <div className="flex gap-2">
+
+        </div>
       </div>
 
       {/* Customer Statistics */}
@@ -222,7 +236,11 @@ function CustomersPage() {
                     </div>
 
                     <div className="pt-3 border-t border-gray-200">
-                      <Button variant="outline" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => navigate({ to: '/customers/$id', params: { id: customer.id } })}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View Details
                       </Button>
